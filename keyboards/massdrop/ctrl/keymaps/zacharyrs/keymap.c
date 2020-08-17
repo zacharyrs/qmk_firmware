@@ -1,44 +1,54 @@
 #include QMK_KEYBOARD_H
 
-HSV stt_gradient_0 = {205, 250, 255};
-HSV stt_gradient_100 = {140, 215, 125};
-bool stt_reflected_gradient = false;
-uint8_t stt_gp_i = 0;
+HSV     zrs_grad_start = {70, 240, 255};
+HSV     zrs_grad_end   = {200, 160, 255};
+bool    zrs_reflected  = false;
+uint8_t zrs_preset     = 0;
 
 typedef struct {
-    HSV gradient_0;
-    HSV gradient_1;
+    HSV  grad_start;
+    HSV  grad_end;
     bool reflected;
-} STT_CUSTOM_PRESETS;
+} ZRS_PRESETS;
+
+ZRS_PRESETS zrs_presets[] = {
+    {{70, 240, 255}, {200, 160, 255}, false},
+    {{70, 240, 255}, {190, 160, 255}, false},
+    {{205, 250, 255}, {140, 215, 125}, false},
+};
+
+uint8_t color_adj_step = 5;
+uint8_t zrs_preset_len = sizeof(zrs_presets) / sizeof(zrs_presets[0]);
 
 enum ctrl_keycodes {
-    U_T_AUTO = SAFE_RANGE,  //USB Extra Port Toggle Auto Detect / Always Active
-    U_T_AGCR,               //USB Toggle Automatic GCR control
-    DBG_TOG,                //DEBUG Toggle On / Off
-    DBG_MTRX,               //DEBUG Toggle Matrix Prints
-    DBG_KBD,                //DEBUG Toggle Keyboard Prints
-    DBG_MOU,                //DEBUG Toggle Mouse Prints
-    MD_BOOT,                //Restart into bootloader after hold timeout
-    ZMOD_KEY,
-    STT_G0_HUI,             //Custom gradient color 1 hue increase
-    STT_G0_HUD,             //Custom gradient color 1 hue decrease
-    STT_G0_SAI,             //Custom gradient color 1 saturation increase
-    STT_G0_SAD,             //Custom gradient color 1 saturation decrease
-    STT_G0_VAI,             //Custom gradient color 1 value increase
-    STT_G0_VAD,             //Custom gradient color 1 value decrease
-    STT_G100_HUI,           //Custom gradient color 2 hue increase
-    STT_G100_HUD,           //Custom gradient color 2 hue decrease
-    STT_G100_SAI,           //Custom gradient color 2 saturation increase
-    STT_G100_SAD,           //Custom gradient color 2 saturation decrease
-    STT_G100_VAI,           //Custom gradient color 2 value increase
-    STT_G100_VAD,           //Custom gradient color 2 value decrease
-    STT_GRADIENT_PRESETS,   //Gradient presets
-    STT_REFLECTED_GRADIENT, //Toggle between linear and reflected gradient
-    STT_GRADIENT_FLIP,      //Flip the gradient colors
+    U_T_AUTO = SAFE_RANGE,  // USB Extra Port Toggle Auto Detect / Always Active
+    U_T_AGCR,               // USB Toggle Automatic GCR control
+    DBG_TOG,                // DEBUG Toggle On / Off
+    DBG_MTRX,               // DEBUG Toggle Matrix Prints
+    DBG_KBD,                // DEBUG Toggle Keyboard Prints
+    DBG_MOU,                // DEBUG Toggle Mouse Prints
+    MD_BOOT,                // Restart into bootloader after hold timeout
+    ZGS_HUI,                // Custom gradient color 1 hue increase
+    ZGS_HUD,                // Custom gradient color 1 hue decrease
+    ZGS_SAI,                // Custom gradient color 1 saturation increase
+    ZGS_SAD,                // Custom gradient color 1 saturation decrease
+    ZGS_VAI,                // Custom gradient color 1 value increase
+    ZGS_VAD,                // Custom gradient color 1 value decrease
+    ZGE_HUI,                // Custom gradient color 2 hue increase
+    ZGE_HUD,                // Custom gradient color 2 hue decrease
+    ZGE_SAI,                // Custom gradient color 2 saturation increase
+    ZGE_SAD,                // Custom gradient color 2 saturation decrease
+    ZGE_VAI,                // Custom gradient color 2 value increase
+    ZGE_VAD,                // Custom gradient color 2 value decrease
+    ZG_PRES,                // Gradient presets
+    Z_REFL,                 // Toggle between linear and reflected gradient
+    Z_FLIP,                 // Flip the gradient colors
+    ZMOD,
 };
 
 keymap_config_t keymap_config;
 
+// clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [0] = LAYOUT(
         KC_ESC,  KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,             KC_PSCR, KC_SLCK, KC_PAUS, \
@@ -46,7 +56,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS,   KC_DEL,  KC_END,  KC_PGDN, \
         KC_CAPS, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT, KC_ENT, \
         KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,                              KC_UP, \
-        KC_LCTL, KC_LGUI, KC_LALT,                   KC_SPC,                             KC_RALT, ZMOD_KEY,   KC_APP,  KC_RCTL,            KC_LEFT, KC_DOWN, KC_RGHT \
+        KC_LCTL, KC_LGUI, KC_LALT,                   KC_SPC,                             KC_RALT, ZMOD,   KC_APP,  KC_RCTL,            KC_LEFT, KC_DOWN, KC_RGHT \
     ),
     [1] = LAYOUT(
         _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,            KC_MUTE, _______, _______, \
@@ -54,45 +64,31 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______, RGB_SPD, RGB_VAI, RGB_SPI, RGB_HUI, RGB_SAI, _______, U_T_AUTO,U_T_AGCR,_______, _______, _______, _______, _______,   KC_MPRV, KC_MNXT, KC_VOLD, \
         _______, RGB_RMOD,RGB_VAD, RGB_MOD, RGB_HUD, RGB_SAD, _______, _______, _______, _______, _______, _______, _______, \
         _______, RGB_TOG, _______, _______, _______, MD_BOOT, NK_TOGG, _______, _______, _______, _______, _______,                              _______, \
-        _______, _______, _______,                   _______,                            _______, ZMOD_KEY, _______, _______,            _______, _______, _______ \
+        _______, _______, _______,                   _______,                            _______, ZMOD, _______, _______,            _______, _______, _______ \
     ),
     [2] = LAYOUT(
         _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,            _______, _______, _______, \
         _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,   _______, _______, _______, \
-        _______, STT_G0_HUD, STT_G0_HUI, STT_G0_SAD, STT_G0_SAI, STT_G0_VAD, STT_G0_VAI, _______, _______, _______, _______, _______, _______, _______,   _______, _______, _______, \
-        _______, STT_G100_HUD, STT_G100_HUI, STT_G100_SAD, STT_G100_SAI, STT_G100_VAD, STT_G100_VAI, _______, _______, _______, _______, _______, _______, \
-        _______, STT_GRADIENT_PRESETS, STT_REFLECTED_GRADIENT, STT_GRADIENT_FLIP, _______, _______, _______, _______, _______, _______, _______, _______,                              _______, \
+        _______, ZGS_HUD, ZGS_HUI, ZGS_SAD, ZGS_SAI, ZGS_VAD, ZGS_VAI, _______, _______, _______, _______, _______, _______, _______,   _______, _______, _______, \
+        _______, ZGE_HUD, ZGE_HUI, ZGE_SAD, ZGE_SAI, ZGE_VAD, ZGE_VAI, _______, _______, _______, _______, _______, _______, \
+        _______, ZG_PRES,  Z_REFL,  Z_FLIP, _______, _______, _______, _______, _______, _______, _______, _______,                              _______, \
         _______, _______, _______,                   _______,                            _______, _______, _______, _______,            _______, _______, _______ \
     )
 };
+// clang-format on
 
 // Runs just one time when the keyboard initializes.
-void matrix_init_user(void) {
-};
+void matrix_init_user(void){};
 
 // Runs constantly in the background, in a loop.
-void matrix_scan_user(void) {
-};
+void matrix_scan_user(void){};
 
-#define MODS_SHIFT  (get_mods() & MOD_MASK_SHIFT)
-#define MODS_CTRL   (get_mods() & MOD_MASK_CTRL)
-#define MODS_ALT    (get_mods() & MOD_MASK_ALT)
+#define MODS_SHIFT (get_mods() & MOD_MASK_SHIFT)
+#define MODS_CTRL (get_mods() & MOD_MASK_CTRL)
+#define MODS_ALT (get_mods() & MOD_MASK_ALT)
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     static uint32_t key_timer;
-    uint8_t color_adj_step = 5;
-    STT_CUSTOM_PRESETS stt_gradient_presets[] = {
-        {{205, 250, 255}, {140, 215, 125}, false },
-        {{41, 255, 255}, {233, 245, 255}, false },
-        {{45, 245, 155}, {160, 255, 80}, false },
-        {{173, 245, 40}, {41, 255, 205}, true },
-        {{32, 255, 165}, {217, 185, 70}, false },
-        {{240, 255, 145}, {115, 255, 245}, true },
-        {{118, 255, 255}, {242, 255, 255}, false },
-        {{118, 255, 255}, {242, 255, 255}, false },
-        {{212, 0, 0}, {223, 235, 165}, true },
-    };
-    uint8_t stt_gp_length = sizeof(stt_gradient_presets)/sizeof(stt_gradient_presets[0]);
 
     switch (keycode) {
         case U_T_AUTO:
@@ -134,7 +130,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 }
             }
             return false;
-        case ZMOD_KEY:
+        case ZMOD:
             if (record->event.pressed) {
                 if (MODS_CTRL) {
                     layer_on(2);
@@ -148,131 +144,157 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
         case RGB_TOG:
             if (record->event.pressed) {
-              switch (rgb_matrix_get_flags()) {
-                case LED_FLAG_ALL: {
-                    rgb_matrix_set_flags(LED_FLAG_KEYLIGHT | LED_FLAG_MODIFIER);
-                    rgb_matrix_set_color_all(0, 0, 0);
-                  }
-                  break;
-                case LED_FLAG_KEYLIGHT | LED_FLAG_MODIFIER: {
-                    rgb_matrix_set_flags(LED_FLAG_UNDERGLOW);
-                    rgb_matrix_set_color_all(0, 0, 0);
-                  }
-                  break;
-                case LED_FLAG_UNDERGLOW: {
-                    rgb_matrix_set_flags(LED_FLAG_NONE);
-                    rgb_matrix_disable_noeeprom();
-                  }
-                  break;
-                default: {
-                    rgb_matrix_set_flags(LED_FLAG_ALL);
-                    rgb_matrix_enable_noeeprom();
-                  }
-                  break;
-              }
+                switch (rgb_matrix_get_flags()) {
+                    case LED_FLAG_ALL: {
+                        rgb_matrix_set_flags(LED_FLAG_KEYLIGHT | LED_FLAG_MODIFIER);
+                        rgb_matrix_set_color_all(0, 0, 0);
+                    } break;
+                    case LED_FLAG_KEYLIGHT | LED_FLAG_MODIFIER: {
+                        rgb_matrix_set_flags(LED_FLAG_UNDERGLOW);
+                        rgb_matrix_set_color_all(0, 0, 0);
+                    } break;
+                    case LED_FLAG_UNDERGLOW: {
+                        rgb_matrix_set_flags(LED_FLAG_NONE);
+                        rgb_matrix_disable_noeeprom();
+                    } break;
+                    default: {
+                        rgb_matrix_set_flags(LED_FLAG_ALL);
+                        rgb_matrix_enable_noeeprom();
+                    } break;
+                }
             }
             return false;
-        case STT_G0_HUI:
+        case ZGS_HUI:
             if (record->event.pressed) {
-                stt_gradient_0.h += color_adj_step;
-                dprintf("Gradient 0 HSV: %d, %d, %d\n", stt_gradient_0.h, stt_gradient_0.s, stt_gradient_0.v);
+                zrs_grad_start.h += color_adj_step;  // Wraps around as 8-bit
+                dprintf("grad_start: %d, %d, %d\n", zrs_grad_start.h, zrs_grad_start.s, zrs_grad_start.v);
             }
             return false;
-        case STT_G0_HUD:
+        case ZGS_HUD:
             if (record->event.pressed) {
-                stt_gradient_0.h -= color_adj_step;
-                dprintf("Gradient 0 HSV: %d, %d, %d\n", stt_gradient_0.h, stt_gradient_0.s, stt_gradient_0.v);
+                zrs_grad_start.h -= color_adj_step;  // Wraps around as 8-bit
+                dprintf("grad_start: %d, %d, %d\n", zrs_grad_start.h, zrs_grad_start.s, zrs_grad_start.v);
             }
             return false;
-        case STT_G0_SAI:
+        case ZGS_SAI:
             if (record->event.pressed) {
-                stt_gradient_0.s = (stt_gradient_0.s + color_adj_step * 2 <= 255) ? stt_gradient_0.s + color_adj_step * 2 : 255;
-                dprintf("Gradient 0 HSV: %d, %d, %d\n", stt_gradient_0.h, stt_gradient_0.s, stt_gradient_0.v);
+                if (zrs_grad_start.s + color_adj_step > 255) {
+                    zrs_grad_start.s = 255;  // Prevent overflows, cap it to 255
+                } else {
+                    zrs_grad_start.s += color_adj_step;
+                }
+                dprintf("grad_start: %d, %d, %d\n", zrs_grad_start.h, zrs_grad_start.s, zrs_grad_start.v);
             }
             return false;
-        case STT_G0_SAD:
+        case ZGS_SAD:
             if (record->event.pressed) {
-                stt_gradient_0.s = (stt_gradient_0.s - color_adj_step * 2 >= 0) ? stt_gradient_0.s - color_adj_step * 2 : 0;
-                dprintf("Gradient 0 HSV: %d, %d, %d\n", stt_gradient_0.h, stt_gradient_0.s, stt_gradient_0.v);
+                if (zrs_grad_start.s - color_adj_step < 0) {
+                    zrs_grad_start.s = 0;  // Prevent overflows, floor it to 0
+                } else {
+                    zrs_grad_start.s -= color_adj_step;
+                }
+                dprintf("grad_start: %d, %d, %d\n", zrs_grad_start.h, zrs_grad_start.s, zrs_grad_start.v);
             }
             return false;
-        case STT_G0_VAI:
+        case ZGS_VAI:
             if (record->event.pressed) {
-                stt_gradient_0.v = (stt_gradient_0.v + color_adj_step * 2 <= 255) ? stt_gradient_0.v + color_adj_step * 2 : 255;
-                dprintf("Gradient 0 HSV: %d, %d, %d\n", stt_gradient_0.h, stt_gradient_0.s, stt_gradient_0.v);
+                if (zrs_grad_start.v + color_adj_step > 255) {
+                    zrs_grad_start.v = 255;  // Prevent overflows, cap it to 255
+                } else {
+                    zrs_grad_start.v += color_adj_step;
+                }
+                dprintf("grad_start: %d, %d, %d\n", zrs_grad_start.h, zrs_grad_start.s, zrs_grad_start.v);
             }
             return false;
-        case STT_G0_VAD:
+        case ZGS_VAD:
             if (record->event.pressed) {
-                stt_gradient_0.v = (stt_gradient_0.v - color_adj_step * 2 >= 0) ? stt_gradient_0.v - color_adj_step * 2 : 0;
-                dprintf("Gradient 0 HSV: %d, %d, %d\n", stt_gradient_0.h, stt_gradient_0.s, stt_gradient_0.v);
+                if (zrs_grad_start.v - color_adj_step < 0) {
+                    zrs_grad_start.v = 0;  // Prevent overflows, floor it to 0
+                } else {
+                    zrs_grad_start.v -= color_adj_step;
+                }
+                dprintf("grad_start: %d, %d, %d\n", zrs_grad_start.h, zrs_grad_start.s, zrs_grad_start.v);
             }
             return false;
-        case STT_G100_HUI:
+        case ZGE_HUI:
             if (record->event.pressed) {
-                stt_gradient_100.h += color_adj_step;
-                dprintf("Gradient 100 HSV: %d, %d, %d\n", stt_gradient_100.h, stt_gradient_100.s, stt_gradient_100.v);
+                zrs_grad_end.h += color_adj_step;  // Wraps around as 8-bit
+                dprintf("grad_end: %d, %d, %d\n", zrs_grad_end.h, zrs_grad_end.s, zrs_grad_end.v);
             }
             return false;
-        case STT_G100_HUD:
+        case ZGE_HUD:
             if (record->event.pressed) {
-                stt_gradient_100.h -= color_adj_step;
-                dprintf("Gradient 100 HSV: %d, %d, %d\n", stt_gradient_100.h, stt_gradient_100.s, stt_gradient_100.v);
+                zrs_grad_end.h -= color_adj_step;  // Wraps around as 8-bit
+                dprintf("grad_end: %d, %d, %d\n", zrs_grad_end.h, zrs_grad_end.s, zrs_grad_end.v);
             }
             return false;
-        case STT_G100_SAI:
+        case ZGE_SAI:
             if (record->event.pressed) {
-                stt_gradient_100.s = (stt_gradient_100.s + color_adj_step * 2 <= 255) ? stt_gradient_100.s + color_adj_step * 2 : 255;
-                dprintf("Gradient 100 HSV: %d, %d, %d\n", stt_gradient_100.h, stt_gradient_100.s, stt_gradient_100.v);
+                if (zrs_grad_end.s + color_adj_step > 255) {
+                    zrs_grad_end.s = 255;  // Prevent overflows, cap it to 255
+                } else {
+                    zrs_grad_end.s += color_adj_step;
+                }
+                dprintf("grad_end: %d, %d, %d\n", zrs_grad_end.h, zrs_grad_end.s, zrs_grad_end.v);
             }
             return false;
-        case STT_G100_SAD:
+        case ZGE_SAD:
             if (record->event.pressed) {
-                stt_gradient_100.s = (stt_gradient_100.s - color_adj_step * 2 >= 0) ? stt_gradient_100.s - color_adj_step * 2 : 0;
-                dprintf("Gradient 100 HSV: %d, %d, %d\n", stt_gradient_100.h, stt_gradient_100.s, stt_gradient_100.v);
+                if (zrs_grad_end.s - color_adj_step < 0) {
+                    zrs_grad_end.s = 0;  // Prevent overflows, cap it to 255
+                } else {
+                    zrs_grad_end.s -= color_adj_step;
+                }
+                dprintf("grad_end: %d, %d, %d\n", zrs_grad_end.h, zrs_grad_end.s, zrs_grad_end.v);
             }
             return false;
-        case STT_G100_VAI:
+        case ZGE_VAI:
             if (record->event.pressed) {
-                stt_gradient_100.v = (stt_gradient_100.v + color_adj_step * 2 <= 255) ? stt_gradient_100.v + color_adj_step * 2 : 255;
-                dprintf("Gradient 100 HSV: %d, %d, %d\n", stt_gradient_100.h, stt_gradient_100.s, stt_gradient_100.v);
+                if (zrs_grad_end.v + color_adj_step > 255) {
+                    zrs_grad_end.v = 255;  // Prevent overflows, cap it to 255
+                } else {
+                    zrs_grad_end.v += color_adj_step;
+                }
+                dprintf("grad_end: %d, %d, %d\n", zrs_grad_end.h, zrs_grad_end.s, zrs_grad_end.v);
             }
             return false;
-        case STT_G100_VAD:
+        case ZGE_VAD:
             if (record->event.pressed) {
-                stt_gradient_100.v = (stt_gradient_100.v - color_adj_step * 2 >= 0) ? stt_gradient_100.v - color_adj_step * 2 : 0;
-                dprintf("Gradient 100 HSV: %d, %d, %d\n", stt_gradient_100.h, stt_gradient_100.s, stt_gradient_100.v);
+                if (zrs_grad_end.v - color_adj_step < 0) {
+                    zrs_grad_end.v = 0;  // Prevent overflows, cap it to 255
+                } else {
+                    zrs_grad_end.v -= color_adj_step;
+                }
+                dprintf("grad_end: %d, %d, %d\n", zrs_grad_end.h, zrs_grad_end.s, zrs_grad_end.v);
             }
             return false;
-        case STT_GRADIENT_PRESETS:
+        case ZG_PRES:
             if (record->event.pressed) {
-                stt_gp_i = (stt_gp_i + stt_gp_length ) % stt_gp_length;
+                zrs_preset = (zrs_preset + 1) % zrs_preset_len;
 
-                stt_gradient_0 = stt_gradient_presets[stt_gp_i].gradient_0;
-                stt_gradient_100 = stt_gradient_presets[stt_gp_i].gradient_1;
-                stt_reflected_gradient = stt_gradient_presets[stt_gp_i].reflected;
-
-                stt_gp_i += 1;
+                zrs_grad_start = zrs_presets[zrs_preset].grad_start;
+                zrs_grad_end   = zrs_presets[zrs_preset].grad_end;
+                zrs_reflected  = zrs_presets[zrs_preset].reflected;
             }
             return false;
-        case STT_REFLECTED_GRADIENT:
+        case Z_REFL:
             if (record->event.pressed) {
-                stt_reflected_gradient = !stt_reflected_gradient;
+                zrs_reflected = !zrs_reflected;
             }
             return false;
-        case STT_GRADIENT_FLIP:
+        case Z_FLIP:
             if (record->event.pressed) {
-                HSV temp_color = stt_gradient_0;
-                stt_gradient_0 = stt_gradient_100;
-                stt_gradient_100 = temp_color;
+                HSV temp_color = zrs_grad_start;
+                zrs_grad_start = zrs_grad_end;
+                zrs_grad_end   = temp_color;
             }
             return false;
         default:
-            return true; //Process all other keycodes normally
+            return true;  // Process all other keycodes normally
     }
 }
 
 void keyboard_post_init_user(void) {
     rgb_matrix_enable_noeeprom();
-    rgb_matrix_mode_noeeprom(RGB_MATRIX_CUSTOM_STT_CUSTOM_GRADIENT);
+    rgb_matrix_mode_noeeprom(RGB_MATRIX_CUSTOM_ZRS_PULSE);
 }
